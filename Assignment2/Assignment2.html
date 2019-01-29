@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Assignment 2</title>
+    <script  src="https://threejs.org/build/three.js"></script>
+    <script  src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+    <script src='https://threejs.org/examples/js/libs/dat.gui.min.js'></script>
+    <script  src= "https://threejs.org/examples/js/loaders/OBJLoader.js"> </script>
+    <script src= "https://threejs.org/examples/js/loaders/MTLLoader.js"> </script>
+
+    <script>
+      function mainFunction()
+      {
+        //Renderer--------------------------------------------------------------
+        let renderer = new THREE.WebGLRenderer( { antialias: true } );
+        renderer.setSize( window.innerWidth, window.innerHeight );
+        renderer.setPixelRatio( window.devicePixelRatio );
+
+        renderer.setClearColor (0x888888, 1);
+        document.body.appendChild( renderer.domElement );
+        //----------------------------------------------------------------------
+
+        //Scene and Camera------------------------------------------------------
+        let scene = new THREE.Scene();
+
+        let aspect = window.innerWidth / window.innerHeight;
+        let camera = new THREE.PerspectiveCamera( 30, aspect, 1, 1000 );
+        camera.position.x = 5;
+        camera.position.y = 5;
+        camera.position.z = 30;
+        scene.add(camera);
+        //----------------------------------------------------------------------
+
+        //Lighting--------------------------------------------------------------
+        let keyLight = new THREE.DirectionalLight(0xFFBF80, 1.0);
+        keyLight.position.set(-1, 0.5, 1);
+
+        let fillLight = new THREE.DirectionalLight(0x8080FF, 0.5);
+        fillLight.position.set(1, 0, 1);
+
+        let backLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        backLight.position.set(1, -0.5, -1).normalize();
+
+
+        let ambientLight = new THREE.AmbientLight(0x888888, 0.25);
+
+        scene.add(keyLight);
+        scene.add(fillLight);
+        scene.add(backLight);
+        scene.add(ambientLight);
+        //----------------------------------------------------------------------
+
+        //Render function and Camera controls-----------------------------------
+        let render = function ()
+        {
+          renderer.render( scene, camera );
+        };
+
+        let cameraControls = new THREE.OrbitControls( camera, renderer.domElement);
+        cameraControls.addEventListener("change",render,false)
+        //----------------------------------------------------------------------
+
+        //Initialize all objects------------------------------------------------
+        let tableInfo =
+        {
+          mtlFileName : "Center table.mtl",
+          objFileName : "Center table.obj",
+          texturePathName : "",
+          scale: 9,
+          rotationX: 0,
+          rotationY: 0,
+          rotationZ: 0,
+          translateVector: new THREE.Vector3(-6,1,-1),
+          object: undefined
+        };
+
+        let grassInfo =
+        {
+          mtlFileName : "grass.mtl",
+          objFileName : "grass.obj",
+          texturePathName : "",
+          scale: 25,
+          rotationX:-Math.PI/2,
+          rotationY: 0,
+          rotationZ: 0,
+          translateVector: new THREE.Vector3(2,0,-1),
+          object: undefined
+        };
+
+        let rockInfo =
+        {
+          mtlFileName : "Rock.mtl",
+          objFileName : "Rock.obj",
+          texturePathName : "",
+          scale: 10,
+          rotationX: 0,
+          rotationY: 0,
+          rotationZ: 0,
+          translateVector: new THREE.Vector3(5,.55,-4),
+          object: undefined
+        };
+
+        //----------------------------------------------------------------------
+
+        //Create basic plane
+        var geo = new THREE.PlaneBufferGeometry(2000, 2000, 8, 8);
+        var mat = new THREE.MeshBasicMaterial({ color: 0x0000FF, side: THREE.DoubleSide });
+        var plane = new THREE.Mesh(geo, mat);
+        scene.add(plane);
+        plane.rotateX( -Math.PI / 2);
+
+        function loadModel(objectInfo)
+        {
+          let mtlLoader = new THREE.MTLLoader();
+          //mtlLoader.setPath(objectInfo.mtlPathName);
+          //mtlLoader.setTexturePath(objectInfo.texturePathName);
+          let objLoader = new THREE.OBJLoader();
+          //objLoader.setPath(objectInfo.objPathName);
+          mtlLoader.load(objectInfo.mtlFileName, onMtlLoad, showLoadProgress, onError);
+
+          function onMtlLoad(mtl)
+          {
+              mtl.preload();
+              objLoader.setMaterials(mtl);
+              objLoader.load(objectInfo.objFileName, onObjLoad, showLoadProgress, onError);
+          }
+
+          function onObjLoad(object)
+          {
+              let bBox = new THREE.Box3().setFromObject(object);
+              let size = new THREE.Vector3();
+              bBox.getSize(size);
+              let maxBaseSize = Math.max(size.x,size.z);
+
+              //Should be Scaling then Rotating then Translating
+              object.scale.multiplyScalar(objectInfo.scale/maxBaseSize);
+              object.rotateX(objectInfo.rotationX);
+              object.rotateY(objectInfo.rotationY);
+              object.rotateZ(objectInfo.rotationZ);
+              object.position.copy(objectInfo.translateVector);
+              objectInfo.obj = object;
+              scene.add(object);
+          }
+
+          function showLoadProgress (xhr)
+          {
+              console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+          }
+
+          function onError()
+          {
+              console.log('An error happened');
+          }
+        }
+
+        loadModel(tableInfo);
+        loadModel(grassInfo);
+        loadModel(rockInfo);
+
+        //Resizing Window-------------------------------------------------------
+        let resize = function ()
+        {
+          renderer.setSize(window.innerWidth, window.innerHeight);
+          camera.aspect = window.innerWidth / window.innerHeight;
+          camera.updateProjectionMatrix();
+          render();
+        };
+
+        window.addEventListener("resize",resize, false)
+        //----------------------------------------------------------------------
+      }
+    </script>
+  </head>
+  <body onload="mainFunction();">
+  <h1>--Jacob Massaro, 3613353--</h1>
+  <h2>--Source Grass:https://free3d.com/3d-model/-circular-grass-patch-v1--883049.html</h2>
+  <h2>--Source Table:https://free3d.com/3d-model/coffee-table-54484.html</h2>
+  <h2>--Source Rock:https://free3d.com/3d-model/low-poly-rock-4631.html</h2>
+  </body>
+</html>

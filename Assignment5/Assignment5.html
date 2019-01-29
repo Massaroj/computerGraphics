@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Assignment 5</title>
+    <script  src="https://threejs.org/build/three.js"></script>
+    <script  src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+    <script src='https://threejs.org/examples/js/libs/dat.gui.min.js'></script>
+    <script  src= "https://threejs.org/examples/js/loaders/OBJLoader.js"> </script>
+    <script src= "https://threejs.org/examples/js/loaders/MTLLoader.js"> </script>
+
+    <script id="vertexShader" type="x-shader/x-vertex">
+    precision highp float;
+
+    attribute vec3 position;
+    attribute vec3 normal;
+
+    uniform mat4 viewMatrix;
+    uniform mat4 modelViewMatrix;
+    uniform mat4 projectionMatrix;
+
+    varying vec3 vPositionEye;
+    varying vec3 vNormalEye;
+
+    void main()
+    {
+      //Get the eye position vector
+      vPositionEye = vec3(modelViewMatrix * vec4(position, 1.0));
+
+      //Get the normal eye vector
+      vNormalEye = vec3(modelViewMatrix * vec4(normal, 0.0));
+
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+    </script>
+
+    <script id="fragmentShader" type="x-shader/x-fragment">
+    precision highp float;
+
+    uniform samplerCube cubemap;
+    uniform mat4 viewMatrix;
+
+    varying vec3 vPositionEye;
+    varying vec3 vNormalEye;
+
+    void main()
+    {
+      //Make the incident and normal vectors
+      vec3 incident = normalize(vPositionEye);
+      vec3 normal = normalize(vNormalEye);
+
+      //Convert from eye to world space
+      vec3 reflected = reflect(incident, normal);
+      mat3 vM = mat3(viewMatrix);
+      vec3 RInWorldspace = vec3(-dot(vM[0],reflected),dot(vM[1],reflected),dot(vM[2],reflected));
+
+      //Get the environment color
+      vec3 envMapColor = textureCube(cubemap, RInWorldspace).rgb;
+
+      gl_FragColor = vec4(envMapColor, reflected);
+    }
+    </script>
+
+    <script>
+      function mainFunction()
+      {
+        //Renderer--------------------------------------------------------------
+        let renderer = new THREE.WebGLRenderer( { antialias: true } );
+        renderer.setSize( window.innerWidth, window.innerHeight );
+        renderer.setPixelRatio( window.devicePixelRatio );
+
+        renderer.setClearColor (0x888888, 1);
+        document.body.appendChild( renderer.domElement );
+
+        let loader = new THREE.CubeTextureLoader();
+        let texture = loader.load([
+          'posx.jpg',
+          'negx.jpg',
+          'posy.jpg',
+          'negy.jpg',
+          'posz.jpg',
+          'negz.jpg'
+        ]);
+
+        let scene = new THREE.Scene();
+        scene.background = texture;
+        //----------------------------------------------------------------------
+
+        //Shader----------------------------------------------------------------
+        let Custom = new THREE.RawShaderMaterial
+        ({
+          side: THREE.DoubleSide,
+          fragmentShader: document.getElementById('fragmentShader').textContent,
+          vertexShader: document.getElementById('vertexShader').textContent,
+          uniforms:
+          {
+            "cubemap" :{type: "t", value: texture},
+          }
+        });
+        //----------------------------------------------------------------------
+
+        //Geometry--------------------------------------------------------------
+        let geometry = new THREE.BoxGeometry(3, 3, 3);
+        let cube = new THREE.Mesh(geometry, Custom);
+        scene.add(cube);
+        //----------------------------------------------------------------------
+
+        //Scene and Camera------------------------------------------------------
+        let aspect = window.innerWidth / window.innerHeight;
+        let camera = new THREE.PerspectiveCamera( 30, aspect, 1, 1000 );
+        camera.position.y = 2;
+        camera.position.z = 15;
+        scene.add(camera);
+        //----------------------------------------------------------------------
+
+        //Lighting--------------------------------------------------------------
+
+        //None :(
+
+        //----------------------------------------------------------------------
+
+        //Render function and Camera controls-----------------------------------
+        let render = function ()
+        {
+          renderer.render( scene, camera );
+        };
+
+        let cameraControls = new THREE.OrbitControls( camera, renderer.domElement);
+        cameraControls.addEventListener("change",render,false)
+        //----------------------------------------------------------------------
+
+        //Resizing Window-------------------------------------------------------
+        let resize = function ()
+        {
+          renderer.setSize(window.innerWidth, window.innerHeight);
+          camera.aspect = window.innerWidth / window.innerHeight;
+          camera.updateProjectionMatrix();
+          render();
+        };
+
+        window.addEventListener("resize",resize, false)
+        //----------------------------------------------------------------------
+    }
+
+    </script>
+  </head>
+  <body onload="mainFunction();">
+  <h1>--Jacob Massaro, 3613353--</h1>
+  </body>
+</html>
